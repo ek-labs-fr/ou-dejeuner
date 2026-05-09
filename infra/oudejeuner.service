@@ -1,0 +1,29 @@
+# /etc/systemd/system/oudejeuner.service
+[Unit]
+Description=Ou Dejeuner Next.js app
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=oudejeuner
+Group=oudejeuner
+WorkingDirectory=/opt/oudejeuner/current
+EnvironmentFile=/etc/oudejeuner/env
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=HOSTNAME=127.0.0.1
+ExecStart=/usr/bin/npx next start
+Restart=on-failure
+RestartSec=2s
+LimitNOFILE=65536
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/oudejeuner
+
+[Install]
+WantedBy=multi-user.target

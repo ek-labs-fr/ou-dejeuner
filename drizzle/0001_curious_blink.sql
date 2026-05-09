@@ -1,0 +1,1 @@
+ALTER TABLE `closure_reports` ADD `issue_type` text DEFAULT 'closed' NOT NULL;
