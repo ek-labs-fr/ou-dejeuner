@@ -44,7 +44,8 @@ npm run build
 echo "==> Packaging release tarball"
 tar -czf "$TARBALL" \
   --exclude='.next/cache' \
-  .next public package.json package-lock.json next.config.mjs drizzle
+  .next public package.json package-lock.json next.config.mjs drizzle \
+  scripts/db-migrate.mjs
 
 echo "==> Uploading"
 scp $SSH_OPTS "$TARBALL" "$EC2_HOST:/tmp/"
@@ -60,6 +61,9 @@ EOF
 
 echo "==> Installing prod deps on remote (native better-sqlite3 build)"
 ssh $SSH_OPTS "$EC2_HOST" "cd $REMOTE_RELEASE && sudo -u oudejeuner npm ci --omit=dev"
+
+echo "==> Applying Drizzle migrations on remote"
+ssh $SSH_OPTS "$EC2_HOST" "cd $REMOTE_RELEASE && sudo -u oudejeuner bash -c 'set -a; source /etc/oudejeuner/env; set +a; node scripts/db-migrate.mjs'"
 
 echo "==> Swapping current symlink and restarting"
 ssh $SSH_OPTS "$EC2_HOST" "sudo ln -sfn $REMOTE_RELEASE $REMOTE_CURRENT && sudo systemctl restart oudejeuner"
