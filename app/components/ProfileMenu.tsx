@@ -10,11 +10,15 @@ import {
 } from "@/lib/identity";
 
 import { IdentityModal } from "./IdentityModal";
+import { MySubmissionsPanel } from "./MySubmissionsPanel";
+import { SubmitRestaurantModal } from "./SubmitRestaurantModal";
 
 export function ProfileMenu() {
   const [name, setName] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [viewingSubmissions, setViewingSubmissions] = useState(false);
   const [browserId, setBrowserIdState] = useState("");
   const ref = useRef<HTMLDivElement>(null);
 
@@ -96,6 +100,31 @@ export function ProfileMenu() {
               </button>
             )}
           </div>
+
+          <div className="my-2 border-t border-copper-200/50" />
+
+          <div className="flex flex-col gap-1">
+            <button
+              type="button"
+              onClick={() => {
+                setSubmitting(true);
+                setOpen(false);
+              }}
+              className="rounded-md px-2 py-1.5 text-left text-teal-900 transition hover:bg-copper-50"
+            >
+              Submit a restaurant
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setViewingSubmissions(true);
+                setOpen(false);
+              }}
+              className="rounded-md px-2 py-1.5 text-left text-teal-700/80 transition hover:bg-copper-50"
+            >
+              My pending submissions
+            </button>
+          </div>
         </div>
       )}
 
@@ -103,6 +132,14 @@ export function ProfileMenu() {
         open={editing}
         onClose={() => setEditing(false)}
         onSaved={setName}
+      />
+      <SubmitRestaurantModal
+        open={submitting}
+        onClose={() => setSubmitting(false)}
+      />
+      <MySubmissionsPanel
+        open={viewingSubmissions}
+        onClose={() => setViewingSubmissions(false)}
       />
     </div>
   );
