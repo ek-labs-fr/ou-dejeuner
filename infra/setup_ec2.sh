@@ -63,6 +63,7 @@ DATABASE_URL=/var/lib/oudejeuner/oudejeuner.db
 OFFICE_GATE_PASSWORD=
 OFFICE_GATE_PASSWORD_READONLY=
 GATE_COOKIE_SECRET=
+ADMIN_PASSWORD=
 EOF
   chmod 600 /etc/oudejeuner/env
 fi

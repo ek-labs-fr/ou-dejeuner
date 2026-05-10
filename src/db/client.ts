@@ -1,7 +1,16 @@
+import { resolve } from 'node:path';
+
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
+import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 
 import * as schema from './schema';
+
+// Where the bundled drizzle/ folder ends up at runtime. The deploy tarball
+// extracts it into the release root next to .next/, so resolve from cwd
+// (which the systemd unit sets to the current symlink). In dev, cwd is the
+// repo root.
+const MIGRATIONS_DIR = resolve(process.cwd(), 'drizzle');
 
 export type Db = ReturnType<typeof drizzle<typeof schema>>;
 
@@ -34,6 +43,11 @@ export function getDb(): Db {
   const sqlite = new Database(path);
   applyPragmas(sqlite);
   const db = drizzle(sqlite, { schema });
+  // Apply pending Drizzle migrations on first connection. Idempotent — a
+  // fully-migrated DB is a fast no-op (one query against drizzle's tracking
+  // table). Without this the deploy ships migration SQL to the box but
+  // never actually runs it, and new tables silently miss in production.
+  migrate(db, { migrationsFolder: MIGRATIONS_DIR });
   globalForDb.__ouDejeunerDb = db;
   return db;
 }

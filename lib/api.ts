@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/src/db/client";
 import { bannedBrowserIds } from "@/src/db/schema";
 
+import { ADMIN_COOKIE_NAME, verifyAdminCookie } from "./admin-gate";
 import { GATE_COOKIE_NAME, verifyGateCookie } from "./gate";
 import { BROWSER_ID_COOKIE } from "./identity";
 
@@ -82,4 +83,17 @@ export function cleanDisplayName(raw: unknown): CleanDisplayName {
 
 export function badRequest(error: string): NextResponse {
   return NextResponse.json({ error }, { status: 400 });
+}
+
+// Top-of-route guard for /api/admin/*. Returns either an `ok: true` marker
+// or a NextResponse to return immediately. The admin gate is independent
+// of the office gate: admin endpoints don't require the office cookie.
+export async function authForAdmin(): Promise<{ ok: true } | NextResponse> {
+  const c = await cookies();
+  const value = c.get(ADMIN_COOKIE_NAME)?.value;
+  const payload = value ? await verifyAdminCookie(value) : null;
+  if (!payload) {
+    return NextResponse.json({ error: "admin_required" }, { status: 401 });
+  }
+  return { ok: true };
 }

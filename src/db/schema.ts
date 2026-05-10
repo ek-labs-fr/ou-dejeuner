@@ -192,3 +192,36 @@ export const bannedBrowserIds = sqliteTable('banned_browser_ids', {
     .notNull()
     .default(sql`(unixepoch())`),
 });
+
+// Tamper-resistant log of admin write actions. v1 is single-admin so there's
+// no `actor` column — multi-admin would add one in a future migration.
+// `targetId` is text so it can hold either an integer row id or a place_id
+// (which is opaque text from Google).
+export const adminAuditLog = sqliteTable('admin_audit_log', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  action: text('action').notNull(),
+  targetType: text('target_type'),
+  targetId: text('target_id'),
+  payload: text('payload', { mode: 'json' }).$type<Record<string, unknown> | null>(),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .default(sql`(unixepoch())`),
+});
+
+export type AdminAuditAction =
+  | 'submission.approve'
+  | 'submission.reject'
+  | 'submission.bulk_approve'
+  | 'submission.bulk_reject'
+  | 'restaurant.set_hidden'
+  | 'restaurant.set_new_badge_override'
+  | 'restaurant.set_tag_override'
+  | 'restaurant.delete'
+  | 'comment.delete'
+  | 'reaction.delete'
+  | 'tag.delete'
+  | 'closure_report.dismiss'
+  | 'closure_report.resolve_by_hiding'
+  | 'ban.create'
+  | 'ban.remove'
+  | 'ban.delete_content';
