@@ -1,5 +1,8 @@
 // Office anchor — coordinates loaded from env so the public repo doesn't
 // pin them. Same value used by the Python ingestion scripts.
+//
+// Reads are deferred until first call so `next build` can compile this
+// module on CI runners that do not carry the runtime env.
 function readOfficeCoord(name: "OFFICE_LAT" | "OFFICE_LNG"): number {
   const raw = process.env[name];
   if (!raw) throw new Error(`${name} env var is required`);
@@ -7,8 +10,16 @@ function readOfficeCoord(name: "OFFICE_LAT" | "OFFICE_LNG"): number {
   if (!Number.isFinite(n)) throw new Error(`${name} must be a number, got: ${raw}`);
   return n;
 }
-export const OFFICE_LAT = readOfficeCoord("OFFICE_LAT");
-export const OFFICE_LNG = readOfficeCoord("OFFICE_LNG");
+let cachedLat: number | null = null;
+let cachedLng: number | null = null;
+function officeLat(): number {
+  if (cachedLat === null) cachedLat = readOfficeCoord("OFFICE_LAT");
+  return cachedLat;
+}
+function officeLng(): number {
+  if (cachedLng === null) cachedLng = readOfficeCoord("OFFICE_LNG");
+  return cachedLng;
+}
 
 const EARTH_RADIUS_M = 6_371_000;
 const WALKING_SPEED_M_PER_MIN = 80;
@@ -35,7 +46,7 @@ export function haversineMeters(
 }
 
 export function walkMinutesFromOffice(lat: number, lng: number): number {
-  const meters = haversineMeters(OFFICE_LAT, OFFICE_LNG, lat, lng);
+  const meters = haversineMeters(officeLat(), officeLng(), lat, lng);
   return Math.round((meters * DETOUR_FACTOR) / WALKING_SPEED_M_PER_MIN);
 }
 
@@ -53,9 +64,9 @@ export type Compass8 = (typeof COMPASS_8)[number];
 
 export function compassFromOffice(lat: number, lng: number): Compass8 {
   const toRad = (d: number) => (d * Math.PI) / 180;
-  const φ1 = toRad(OFFICE_LAT);
+  const φ1 = toRad(officeLat());
   const φ2 = toRad(lat);
-  const Δλ = toRad(lng - OFFICE_LNG);
+  const Δλ = toRad(lng - officeLng());
   const y = Math.sin(Δλ) * Math.cos(φ2);
   const x =
     Math.cos(φ1) * Math.sin(φ2) -

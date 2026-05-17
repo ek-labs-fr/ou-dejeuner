@@ -2,15 +2,18 @@
 // Safe to import from middleware (Edge runtime), server components, and
 // client-side hashing helpers alike. Uses Web Crypto so it runs unchanged
 // in both Node and Edge.
+//
+// Env reads are deferred until first call so `next build` can compile
+// this module on CI runners that do not carry the runtime secrets.
 
-const SECRET = process.env.GATE_COOKIE_SECRET;
-const FULL_PASSWORD = process.env.OFFICE_GATE_PASSWORD;
-const READONLY_PASSWORD = process.env.OFFICE_GATE_PASSWORD_READONLY;
-
-if (!SECRET || !FULL_PASSWORD || !READONLY_PASSWORD) {
-  throw new Error(
-    "Missing gate env vars. Set GATE_COOKIE_SECRET, OFFICE_GATE_PASSWORD, and OFFICE_GATE_PASSWORD_READONLY in .env.",
-  );
+function requireEnv(name: string): string {
+  const v = process.env[name];
+  if (!v) {
+    throw new Error(
+      "Missing gate env vars. Set GATE_COOKIE_SECRET, OFFICE_GATE_PASSWORD, and OFFICE_GATE_PASSWORD_READONLY in .env.",
+    );
+  }
+  return v;
 }
 
 export type Tier = "full" | "readonly";
@@ -27,7 +30,7 @@ function getKey(): Promise<CryptoKey> {
   if (!keyPromise) {
     keyPromise = crypto.subtle.importKey(
       "raw",
-      new TextEncoder().encode(SECRET),
+      new TextEncoder().encode(requireEnv("GATE_COOKIE_SECRET")),
       { name: "HMAC", hash: "SHA-256" },
       false,
       ["sign", "verify"],
@@ -109,8 +112,8 @@ export function tierForPassword(password: string): Tier | null {
   // Check both passwords with constant-time compare so an attacker can't
   // distinguish "wrong full password" from "wrong readonly password" by
   // timing. The server reveals only "yes/no" to the client either way.
-  const fullMatch = constantTimeEqual(password, FULL_PASSWORD!);
-  const roMatch = constantTimeEqual(password, READONLY_PASSWORD!);
+  const fullMatch = constantTimeEqual(password, requireEnv("OFFICE_GATE_PASSWORD"));
+  const roMatch = constantTimeEqual(password, requireEnv("OFFICE_GATE_PASSWORD_READONLY"));
   if (fullMatch) return "full";
   if (roMatch) return "readonly";
   return null;

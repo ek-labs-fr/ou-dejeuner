@@ -2,14 +2,18 @@
 // admin session is short-lived and revocable without forcing colleagues
 // to re-enter the office password. Same HMAC secret as `lib/gate.ts`
 // since the cookie names differentiate them.
+//
+// Env reads are deferred until first call so `next build` can compile
+// this module on CI runners that do not carry the runtime secrets.
 
-const SECRET = process.env.GATE_COOKIE_SECRET;
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
-
-if (!SECRET || !ADMIN_PASSWORD) {
-  throw new Error(
-    "Missing admin gate env vars. Set GATE_COOKIE_SECRET and ADMIN_PASSWORD in .env.",
-  );
+function requireEnv(name: string): string {
+  const v = process.env[name];
+  if (!v) {
+    throw new Error(
+      "Missing admin gate env vars. Set GATE_COOKIE_SECRET and ADMIN_PASSWORD in .env.",
+    );
+  }
+  return v;
 }
 
 export type AdminPayload = { iat: number };
@@ -24,7 +28,7 @@ function getKey(): Promise<CryptoKey> {
   if (!keyPromise) {
     keyPromise = crypto.subtle.importKey(
       "raw",
-      new TextEncoder().encode(SECRET),
+      new TextEncoder().encode(requireEnv("GATE_COOKIE_SECRET")),
       { name: "HMAC", hash: "SHA-256" },
       false,
       ["sign", "verify"],
@@ -99,7 +103,7 @@ export async function verifyAdminCookie(value: string): Promise<AdminPayload | n
 }
 
 export function isAdminPassword(password: string): boolean {
-  return constantTimeEqual(password, ADMIN_PASSWORD!);
+  return constantTimeEqual(password, requireEnv("ADMIN_PASSWORD"));
 }
 
 function constantTimeEqual(a: string, b: string): boolean {
